@@ -21,11 +21,7 @@
       </div>
       <div class="row">
         <div class="col">
-          <form
-            id="patientForm"
-            autocomplete="off"
-            onsubmit="handleSubmit(event)"
-          >
+          <form id="patientForm" autocomplete="off">
             <div class="row">
               <div class="col-md-3 col-sm-6 col-xs-12">
                 <div class="form-group">
@@ -83,8 +79,9 @@
               <div class="col">
                 <input
                   class="btn btn-primary"
-                  type="submit"
+                  type="button"
                   value="Add Record"
+                  onclick="ref.handleSubmit(event)"
                 />
               </div>
             </div>
@@ -102,7 +99,8 @@
                 <th>Age</th>
                 <th>Blood Group</th>
                 <th>Reading</th>
-                <th>Status</th>
+                <th>Level</th>
+                <th></th>
               </tr>
             </thead>
             <tbody></tbody>

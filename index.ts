@@ -1,4 +1,5 @@
 import { Record } from "./Record.js";
+import { checkBloodLevel } from "./utils.js";
 
 let form = <HTMLFormElement>document.getElementById("patientForm")!;
 let tableBody = document.getElementsByTagName("tbody")[0];
@@ -10,71 +11,101 @@ let personReading = <HTMLInputElement>document.getElementById("reading");
 
 personDOB.max = new Date().toISOString().split("T")[0];
 
-let inputs = [personName, personDOB, personBG, personReading];
-
-let count = 0;
-
-function handleSubmit(e: Event) {
+export function handleSubmit(e: Event) {
   e.preventDefault();
 
   let record = new Record(
     personName.value,
     personDOB.value,
     personBG.value,
-    personReading.value.toString()
+    personReading.value
   );
 
-  console.log(record);
-
-  insertRecord();
+  insertRecord(record);
 
   form.reset();
 }
 
-function insertRecord() {
+function insertRecord(record: Record) {
   let row = document.createElement("tr");
 
-  count++;
   let idCell = document.createElement("td");
-  idCell.innerText = count.toString();
+  idCell.innerHTML = (++Record.recordCount).toString();
   row.appendChild(idCell);
 
-  inputs.forEach((input) => {
+  Object.entries(record).forEach((entry) => {
     let cell = document.createElement("td");
-    cell.innerHTML = input.value;
+    cell.innerHTML = entry[1];
     row.appendChild(cell);
-    if (input === personDOB) {
-      let age = calculateAge(input.value);
+    if (entry[0] === "dob") {
+      let age = record.calculateAge();
       let ageCell = document.createElement("td");
       ageCell.innerHTML = age;
       row.appendChild(ageCell);
     }
   });
 
-  let bloodLevel = personReading.valueAsNumber;
   let statusCell = document.createElement("td");
-  if (bloodLevel < 65 || bloodLevel > 100) {
-    statusCell.setAttribute("class", "table-danger");
-    if (bloodLevel < 65) {
-      statusCell.innerHTML = "Below";
-    } else {
-      statusCell.innerHTML = "Above";
-    }
-  } else {
-    statusCell.setAttribute("class", "table-success");
-    statusCell.innerHTML = "Normal";
-  }
+  let bloodLevel = record.checkBloodLevel();
+  statusCell.innerHTML = bloodLevel.text;
+  statusCell.setAttribute("class", bloodLevel.style);
+
+  let iconCell = document.createElement("td");
+
+  let deleteButton = document.createElement("button");
+  deleteButton.innerText = "X";
+  deleteButton.setAttribute("class", "btn btn-danger");
+  deleteButton.setAttribute(
+    "onclick",
+    `ref.deleteRecord(${Record.recordCount})`
+  );
+
+  let editButton = document.createElement("button");
+  editButton.innerText = "Edit";
+  editButton.setAttribute("class", "btn btn-secondary ml-1");
+  editButton.setAttribute(
+    "onclick",
+    `ref.editRecord(${Record.recordCount},${record.checkBloodLevel})`
+  );
+
+  iconCell.appendChild(deleteButton);
+  iconCell.appendChild(editButton);
 
   row.appendChild(statusCell);
+  row.appendChild(iconCell);
+
+  row.setAttribute("id", Record.recordCount.toString());
 
   tableBody.appendChild(row);
 }
 
-function calculateAge(dob: string) {
-  let birthday = new Date(dob);
-  let diff = Date.now() - birthday.getTime();
+export function deleteRecord(id: number) {
+  let selectedRow = document.getElementById(id.toString());
+  selectedRow?.remove();
+}
 
-  let diffDate = new Date(diff);
+export function editRecord(id: number) {
+  let selectedRow = document.getElementById(id.toString());
+  let readingColumn = selectedRow?.childNodes[5];
+  let bloodLevelColumn = selectedRow?.childNodes[6];
 
-  return Math.abs(diffDate.getUTCFullYear() - 1970).toString();
+  let editInput = document.createElement("input");
+  editInput.setAttribute("type", "number");
+  editInput.setAttribute("min", "0");
+  editInput.value = readingColumn?.firstChild?.nodeValue!;
+
+  editInput.addEventListener("blur", function (e) {
+    let updatedValue = editInput.value || "0";
+    let updatedReading = document.createTextNode(updatedValue);
+    readingColumn?.replaceChild(updatedReading, editInput);
+
+    let updatedBloodLevel = checkBloodLevel(updatedValue);
+    let updatedStatusCell = document.createElement("td");
+    updatedStatusCell.innerText = updatedBloodLevel.text;
+    updatedStatusCell.setAttribute("class", updatedBloodLevel.style);
+
+    bloodLevelColumn?.replaceWith(updatedStatusCell);
+  });
+
+  readingColumn?.replaceChild(editInput, readingColumn.childNodes[0]);
 }
